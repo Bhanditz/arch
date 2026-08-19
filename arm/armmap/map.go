@@ -5,12 +5,13 @@
 // Armmap constructs the ARM opcode map from the instruction set CSV file.
 //
 // Usage:
+//
 //	armmap [-fmt=format] arm.csv
 //
 // The known output formats are:
 //
-//  text (default) - print decoding tree in text form
-//  decoder - print decoding tables for the armasm package
+//	text (default) - print decoding tree in text form
+//	decoder - print decoding tables for the armasm package
 package main
 
 import (
@@ -524,14 +525,14 @@ var argOps = map[string]string{
 	"FPSCR": "arg_FPSCR",
 
 	// VFP floating point registers
-	"<Sd>|Vd:4@12|D@22":         "arg_Sd",
-	"<Sd,Dd>|Vd:4@12|D@22|sz@8": "arg_Sd_Dd",
-	"<Dd,Sd>|Vd:4@12|D@22|sz@8": "arg_Dd_Sd",
-	"<Sn>|Vn:4@16|N@7":          "arg_Sn",
-	"<Sn,Dn>|Vn:4@16|N@7|sz@8":  "arg_Sn_Dn",
-	"<Sm>|Vm:4@0|M@5":           "arg_Sm",
-	"<Sm,Dm>|Vm:4@0|M@5|sz@8":   "arg_Sm_Dm",
-	"#0.0": "arg_fp_0",
+	"<Sd>|Vd:4@12|D@22":                    "arg_Sd",
+	"<Sd,Dd>|Vd:4@12|D@22|sz@8":            "arg_Sd_Dd",
+	"<Dd,Sd>|Vd:4@12|D@22|sz@8":            "arg_Dd_Sd",
+	"<Sn>|Vn:4@16|N@7":                     "arg_Sn",
+	"<Sn,Dn>|Vn:4@16|N@7|sz@8":             "arg_Sn_Dn",
+	"<Sm>|Vm:4@0|M@5":                      "arg_Sm",
+	"<Sm,Dm>|Vm:4@0|M@5|sz@8":              "arg_Sm_Dm",
+	"#0.0":                                 "arg_fp_0",
 	"#<imm_vfp>|imm4H:4@16|imm4L:4@0|sz@8": "arg_imm_vfp",
 	"#<fbits>|sx@7|imm4:4@0|i@5":           "arg_fbits",
 	"<Dn[x]>|N@7|Vn:4@16|opc1@21":          "arg_Dn_half",

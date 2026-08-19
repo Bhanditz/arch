@@ -2,19 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build go1.6
-// +build !386 go1.8
-// ... see golang.org/issue/12840
-
-// Armspec reads the ``ARM Architecture Reference Manual''
+// Armspec reads the “ARM Architecture Reference Manual”
 // to collect instruction encoding details and writes those details to standard output
 // in JSON format.
 //
-// Warning Warning Warning
+// # Warning Warning Warning
 //
 // This program is unfinished. It is being published in this incomplete form
 // for interested readers, but do not expect it to be runnable or useful.
-//
 package main
 
 import (
@@ -586,7 +581,14 @@ func findWords(chars []pdf.Text) (words []pdf.Text) {
 			f := ck.Font
 			f = strings.TrimSuffix(f, ",Italic")
 			f = strings.TrimSuffix(f, "-Italic")
-			words = append(words, pdf.Text{f, ck.FontSize, ck.X, ck.Y, end - ck.X, s})
+			words = append(words, pdf.Text{
+				Font:     f,
+				FontSize: ck.FontSize,
+				X:        ck.X,
+				Y:        ck.Y,
+				W:        end - ck.X,
+				S:        s,
+			})
 			k = l
 		}
 		i = j
@@ -604,10 +606,10 @@ func sameFont(f1, f2 string) bool {
 }
 
 var jsFix = strings.NewReplacer(
-//	`\u003c`, `<`,
-//	`\u003e`, `>`,
-//	`\u0026`, `&`,
-//	`\u0009`, `\t`,
+// `\u003c`, `<`,
+// `\u003e`, `>`,
+// `\u0026`, `&`,
+// `\u0009`, `\t`,
 )
 
 func printTable(name string, table []Inst) {

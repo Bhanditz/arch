@@ -31,7 +31,6 @@ import (
 var (
 	dumpTest = flag.Bool("dump", false, "dump all encodings")
 	mismatch = flag.Bool("mismatch", false, "log allowed mismatches")
-	longTest = flag.Bool("long", false, "long test")
 	keep     = flag.Bool("keep", false, "keep object files around")
 	debug    = false
 )
@@ -150,8 +149,13 @@ func testExtDis(
 
 		errors = make([]string, 0, 100) // Sampled errors, at most cap
 	)
+
 	go func() {
-		errc <- extdis(ext)
+		err := extdis(ext)
+		if err != nil {
+			close(ext.Dec)
+		}
+		errc <- err
 	}()
 
 	generate(func(enc []byte) {
@@ -164,7 +168,7 @@ func testExtDis(
 
 		totalTests++
 		if *dumpTest {
-			fmt.Printf("%x -> %s [%d]\n", enc[:len(enc)], dec.text, dec.nenc)
+			fmt.Printf("%x -> %s [%d]\n", enc, dec.text, dec.nenc)
 		}
 		if text != dec.text && !strings.Contains(dec.text, "unknown") && syntax == "gnu" {
 			suffix := ""
@@ -205,7 +209,6 @@ func testExtDis(
 	if err := <-errc; err != nil {
 		t.Fatalf("external disassembler: %v", err)
 	}
-
 }
 
 // Start address of text.
@@ -256,7 +259,6 @@ func disasm(syntax string, src []byte) (inst Inst, text string) {
 		text = "error: " + err.Error()
 		return
 	}
-	text = inst.String()
 	switch syntax {
 	case "gnu":
 		text = GNUSyntax(inst)
@@ -268,7 +270,7 @@ func disasm(syntax string, src []byte) (inst Inst, text string) {
 	return
 }
 
-// decodecoverage returns a floating point number denoting the
+// decodeCoverage returns a floating point number denoting the
 // decoder coverage.
 func decodeCoverage() float64 {
 	n := 0
@@ -424,7 +426,7 @@ var condmark bool = false
 func doFuzzy(inst *InstJson, Ninst int) {
 	var testdata uint32
 	var NonDigRE = regexp.MustCompile(`[\D]`)
-	rand.Seed(int64(Round + Ninst))
+	rand := rand.New(rand.NewSource(int64(Round + Ninst)))
 	off := 0
 	DigBit := ""
 	if condmark == true && !strings.Contains(inst.Bits, "cond") {
@@ -518,11 +520,8 @@ func JSONCases(t *testing.T) func(func([]byte)) {
 			t.Fatal(err)
 		}
 		// Append instructions to get more test cases.
-		for i := 0; i < N; {
-			for _, inst := range insts {
-				instsN = append(instsN, inst)
-			}
-			i++
+		for i := 0; i < N; i++ {
+			instsN = append(instsN, insts...)
 		}
 		Round = 0
 		for i := range instsN {

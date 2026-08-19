@@ -14,22 +14,34 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-const objdumpPath = "/usr/bin/objdump"
+var objdumpPath = "objdump"
+
+var objdumpCrossNames = [...]string{"powerpc64-linux-gnu-objdump", "powerpc64le-linux-gnu-objdump"}
 
 func testObjdump(t *testing.T, generate func(func([]byte))) {
 	if testing.Short() {
 		t.Skip("skipping objdump test in short mode")
 	}
 	if runtime.GOARCH != "ppc64le" && runtime.GOARCH != "ppc64" {
-		t.Skip("skipping; test requires host tool objdump for ppc64 or ppc64le")
-	}
-	if _, err := os.Stat(objdumpPath); err != nil {
+		found := false
+		for _, c := range objdumpCrossNames {
+			if _, err := exec.LookPath(c); err == nil {
+				objdumpPath = c
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Skip("skipping; test requires host tool objdump for ppc64 or ppc64le")
+		}
+	} else if _, err := exec.LookPath(objdumpPath); err != nil {
 		t.Skip(err)
 	}
 
@@ -52,7 +64,7 @@ func objdump(ext *ExtDis) error {
 		reading bool
 		next    uint32 = start
 		addr    uint32
-		encbuf  [4]byte
+		encbuf  [8]byte
 		enc     []byte
 		text    string
 	)
@@ -76,15 +88,19 @@ func objdump(ext *ExtDis) error {
 				text = "error: unknown instruction"
 				enc = nil
 			}
-			if len(enc) == 4 {
-				// prints as word but we want to record bytes
-				enc[0], enc[3] = enc[3], enc[0]
-				enc[1], enc[2] = enc[2], enc[1]
+			// Prefixed instructions may not decode as expected if
+			// they are an invalid form. Some are tested in decode.txt.
+			// objdump treats these like two instructions.
+			//
+			// Look for primary opcode 1 and advance an exta 4 bytes if
+			// this failed to decode.
+			if strings.HasPrefix(text, ".long") && enc[0]>>2 == 1 {
+				next += 4
 			}
 			ext.Dec <- ExtInst{addr, encbuf, len(enc), text}
-			encbuf = [4]byte{}
+			encbuf = [8]byte{}
+			next += uint32(len(enc))
 			enc = nil
-			next += 4
 		}
 	}
 	var textangle = []byte("<.text>:")

@@ -40,7 +40,7 @@ var (
 // from an external disassembler's output.
 type ExtInst struct {
 	addr uint32
-	enc  [4]byte
+	enc  [8]byte
 	nenc int
 	text string
 }
@@ -128,9 +128,15 @@ func testExtDis(
 
 		errors = make([]string, 0, 100) // sampled errors, at most cap
 	)
+
 	go func() {
-		errc <- extdis(ext)
+		err := extdis(ext)
+		if err != nil {
+			close(ext.Dec)
+		}
+		errc <- err
 	}()
+
 	generate(func(enc []byte) {
 		dec, ok := <-ext.Dec
 		if !ok {
@@ -200,20 +206,25 @@ func writeInst(generate func(func([]byte))) (file string, f *os.File, size int, 
 	defer w.Flush()
 	size = 0
 	generate(func(x []byte) {
-		if len(x) > 4 {
-			x = x[:4]
+		if len(x) != 4 && len(x) != 8 {
+			panic(fmt.Sprintf("Unexpected instruction %v\n", x))
+		}
+		izeros := zeros
+		if len(x) == 4 {
+			// Only pad to 4 bytes for a 4 byte instruction word.
+			izeros = izeros[4:]
 		}
 		if debug {
-			fmt.Printf("%#x: %x%x\n", start+size, x, zeros[len(x):])
+			fmt.Printf("%#x: %x%x\n", start+size, x, izeros[len(x):])
 		}
 		w.Write(x)
-		w.Write(zeros[len(x):])
-		size += len(zeros)
+		w.Write(izeros[len(x):])
+		size += len(izeros)
 	})
 	return file, f, size, nil
 }
 
-var zeros = []byte{0, 0, 0, 0}
+var zeros = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 
 // pad pads the code sequence with pops.
 func pad(enc []byte) []byte {
@@ -245,7 +256,7 @@ func disasm(syntax string, src []byte) (inst Inst, text string) {
 		//case "arm":
 		//	text = ARMSyntax(inst)
 		case "gnu":
-			text = GNUSyntax(inst)
+			text = GNUSyntax(inst, 0)
 		//case "plan9":
 		//	text = GoSyntax(inst, 0, nil)
 		default:

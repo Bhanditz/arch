@@ -197,7 +197,6 @@ var unsupported = strings.Fields(`
 	clgi
 	femms
 	fldln
-	fldz
 	getsec
 	invlpga
 	kmov
@@ -223,8 +222,6 @@ var unsupported = strings.Fields(`
 	pswap
 	ptest
 	rdseed
-	sha1
-	sha256
 	skinit
 	stac
 	stgi

@@ -100,6 +100,11 @@ func testExtDis(
 	generate func(f func([]byte)),
 	allowedMismatch func(text string, size int, inst *Inst, dec ExtInst) bool,
 ) {
+	decoderCover = make([]bool, len(decoder))
+	defer func() {
+		decoderCover = nil
+	}()
+
 	start := time.Now()
 	ext := &ExtDis{
 		Dec:  make(chan ExtInst),
@@ -129,9 +134,15 @@ func testExtDis(
 
 		errors = make([]string, 0, 100) // sampled errors, at most cap
 	)
+
 	go func() {
-		errc <- extdis(ext)
+		err := extdis(ext)
+		if err != nil {
+			close(ext.Dec)
+		}
+		errc <- err
 	}()
+
 	generate(func(enc []byte) {
 		dec, ok := <-ext.Dec
 		if !ok {
@@ -648,7 +659,7 @@ func enum8bit(try func([]byte)) {
 	}
 }
 
-// enum8bit generates all possible 2-byte sequences, followed by distinctive padding.
+// enum16bit generates all possible 2-byte sequences, followed by distinctive padding.
 func enum16bit(try func([]byte)) {
 	for i := 0; i < 1<<16; i++ {
 		try([]byte{byte(i), byte(i >> 8), 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88})
